@@ -1,0 +1,29 @@
+# LEVEL 2 — Job: execute one set of temperature readings, then finish.
+# Unlike a Deployment, a Job expects the application to EXIT successfully.
+apiVersion: batch/v1 # Jobs are part of Kubernetes' batch API.
+kind: Job # Run a finite task until it completes or fails.
+metadata:
+  name: temperature-job # Used by kubectl logs job/temperature-job.
+  labels:
+    app: temperature-monitor # Find it with: kubectl get jobs -l app=temperature-monitor.
+spec:
+  backoffLimit: 0 # For this lab, do not retry failed Pods.
+  template: # Description of the Pod created by the Job.
+    spec:
+      restartPolicy: Never # Jobs allow Never or OnFailure, not Always.
+      securityContext:
+        runAsNonRoot: true # Do not execute as root.
+        runAsUser: 65534 # The same numeric user as in our Dockerfile.
+      containers:
+        - name: analyzer # Container name within the Pod.
+          image: temperature-monitor:1.0
+          imagePullPolicy: IfNotPresent # Use image loaded into Minikube.
+          command: ["/app/monitor"] # Override Dockerfile CMD (Python server).
+          args: ["22", "25", "31", "28", "35"] # Five readings for the C program.
+          resources:
+            requests: # Resources reserved for scheduling (not a minimum usage).
+              cpu: "25m" # 0.025 CPU core.
+              memory: "16Mi"
+            limits: # CPU gets throttled; memory overuse may cause OOM kill.
+              cpu: "250m" # 0.25 CPU core.
+              memory: "64Mi"

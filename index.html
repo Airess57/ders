@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Temperature Analyzer</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 520px;
+        margin: 60px auto;
+        padding: 0 20px;
+        color: #253044;
+      }
+      input {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 12px;
+        font: inherit;
+        border: 1px solid #99a;
+        border-radius: 6px;
+      }
+      button {
+        margin-top: 14px;
+        padding: 11px 18px;
+        cursor: pointer;
+        font: inherit;
+      }
+      pre {
+        background: #eef2f7;
+        padding: 18px;
+        white-space: pre-wrap;
+        border-radius: 8px;
+      }
+      .error {
+        color: #a22020;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Temperature Analyzer</h1>
+    <p>
+      Enter up to 20 simulated sensor readings, separated by commas. The C
+      program calculates the statistics.
+    </p>
+    <label for="readings">Temperature readings (°C)</label>
+    <input id="readings" value="22, 25, 31, 28, 35" />
+    <button id="analyze">Analyze temperatures</button>
+    <pre id="result" aria-live="polite">Enter values and press Analyze.</pre>
+    <script>
+      document.getElementById("analyze").addEventListener("click", async () => {
+        const result = document.getElementById("result");
+        result.textContent = "Analyzing...";
+        try {
+          const readings = document.getElementById("readings").value;
+          const response = await fetch(
+            "/analyze?readings=" + encodeURIComponent(readings),
+          );
+          const data = await response.json();
+          result.className = data.ok ? "" : "error";
+          result.textContent = data.output;
+        } catch (error) {
+          result.className = "error";
+          result.textContent = "Could not reach the server.";
+        }
+      });
+    </script>
+  </body>
+</html>

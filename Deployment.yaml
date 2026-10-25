@@ -1,0 +1,45 @@
+# LEVEL 4 — Deployment: keep a long-running web application available.
+# The Python server serves HTML and invokes our compiled C program on requests.
+apiVersion: apps/v1 # Deployments belong to Kubernetes' apps API.
+kind: Deployment
+metadata:
+  name: temperature-monitor
+  labels:
+    app: temperature-monitor
+spec:
+  replicas: 1 # Number of Pod copies Kubernetes should maintain.
+  selector:
+    matchLabels:
+      app: temperature-monitor # Which Pods belong to this Deployment.
+  template: # Blueprint for Pods managed by the Deployment.
+    metadata:
+      labels:
+        app: temperature-monitor # MUST match selector.matchLabels above.
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: web
+          image: temperature-monitor:1.0
+          imagePullPolicy: IfNotPresent
+          # No command override: run Dockerfile CMD ["python3", "server.py"].
+          ports:
+            - containerPort: 8000 # Port inside the Pod, not a public port.
+          readinessProbe: # Only mark Pod Ready when HTTP endpoint works.
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "32Mi"
+            limits:
+              cpu: "250m"
+              memory: "128Mi"
+# Try: kubectl apply -f Deployment.yaml
+# Then: kubectl port-forward deployment/temperature-monitor 8080:8000
+# Open http://localhost:8080 in your browser.
+# Scale: kubectl scale deployment temperature-monitor --replicas=2

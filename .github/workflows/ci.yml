@@ -1,0 +1,50 @@
+name: CI - C and Docker
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check C compiler warnings
+        run: gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only monitor.c
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run C tests
+        run: bash test.sh | tee test-results.txt
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: test-results.txt
+  kubernetes-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Kubernetes YAML structure
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 - <<'PYCODE'
+          import yaml
+          for filename, kind in [('Job.yaml','Job'),('CronJob.yaml','CronJob'),('Deployment.yaml','Deployment')]:
+              with open(filename, encoding='utf-8') as f:
+                  doc = yaml.safe_load(f)
+              assert doc['kind'] == kind, filename
+              assert doc['apiVersion'], filename
+              print('PASS:', filename)
+          PYCODE
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t temperature-monitor:ci .
+      - name: Test C executable in Docker
+        run: |
+          docker run --rm temperature-monitor:ci /app/monitor 20 25 30 | grep -F 'Average: 25.0 C'

@@ -1,0 +1,29 @@
+name: CI - Website
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  website-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build C program
+        run: gcc -std=c11 -Wall -Wextra -Werror -O2 monitor.c -o monitor
+      - name: Start web server
+        run: |
+          python3 server.py > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat server.log
+          exit 1
+      - name: Test HTTP responses
+        run: bash test-web.sh
+      - name: Show server log if failed
+        if: failure()
+        run: cat server.log

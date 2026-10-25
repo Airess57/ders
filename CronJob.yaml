@@ -1,0 +1,37 @@
+# LEVEL 3 — CronJob: schedule the same finite C task repeatedly.
+# A CronJob creates a new Job according to a schedule; it is NOT a Deployment.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: temperature-cron
+  labels:
+    app: temperature-monitor
+spec:
+  schedule: "*/5 * * * *" # Every 5 minutes, using cron syntax.
+  concurrencyPolicy: Forbid # Do not overlap scheduled Jobs if one is still running.
+  successfulJobsHistoryLimit: 1 # Keep only one completed Job for inspection.
+  failedJobsHistoryLimit: 1 # Keep only one failed Job for inspection.
+  jobTemplate: # Template for each Job created by this CronJob.
+    spec:
+      backoffLimit: 0 # Do not retry a failed temperature analysis.
+      template: # Template for the Pod created by each Job.
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+          containers:
+            - name: analyzer
+              image: temperature-monitor:1.0
+              imagePullPolicy: IfNotPresent
+              command: ["/app/monitor"] # Run C instead of the Python server.
+              args: ["18", "21", "24", "29"]
+              resources:
+                requests:
+                  cpu: "25m"
+                  memory: "16Mi"
+                limits:
+                  cpu: "250m"
+                  memory: "64Mi"
+# No need to wait 5 minutes in class:
+# kubectl create job temperature-manual --from=cronjob/temperature-cron
