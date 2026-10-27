@@ -19,7 +19,7 @@ spec:
           image: temperature-monitor:1.0
           imagePullPolicy: IfNotPresent # Use image loaded into Minikube.
           command: ["/app/monitor"] # Override Dockerfile CMD (Python server).
-          args: ["22", "25", "31", "28", "35"] # Five readings for the C program.
+          args: ["29", "25", "57", "28", "35"] # Five readings for the C program.
           resources:
             requests: # Resources reserved for scheduling (not a minimum usage).
               cpu: "25m" # 0.025 CPU core.
